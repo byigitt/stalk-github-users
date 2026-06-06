@@ -1,80 +1,80 @@
 # Stalk GitHub Users
 
-Configured GitHub kullanıcılarının **public** aktivitelerini izler ve yeni olayları Discord webhook'a ayrıntılı bildirir. Şu olaylar desteklenir:
+Watches the **public** activity of configured GitHub users and sends detailed notifications about new events to a Discord webhook. The following events are supported:
 
-- `PushEvent`: yeni commit/push değişiklikleri
-- `CreateEvent`: yeni public repo, branch veya tag oluşturma
-- `IssuesEvent`: yeni issue açma
-- `PullRequestEvent`: yeni PR açma
+- `PushEvent`: new commit/push changes
+- `CreateEvent`: new public repo, branch, or tag creation
+- `IssuesEvent`: new issue opened
+- `PullRequestEvent`: new PR opened
 
-Bildirimler kullanıcı, aksiyon tipi, repo, başlık/özet, GitHub URL, zaman, branch, commit, issue ve PR detaylarını içerir. Event ID'leri kalıcı state dosyasında tutulduğu için aynı olay restart sonrası tekrar gönderilmez.
+Notifications include the user, action type, repo, title/summary, GitHub URL, timestamp, branch, commit, issue, and PR details. Event IDs are kept in a persistent state file, so the same event is not sent again after a restart.
 
-## Kurulum
+## Installation
 
 ```bash
 pnpm install
 cp .env.example .env
 ```
 
-CLI başlangıçta `.env` dosyasını otomatik yükler. `.env` içindeki değerleri düzenleyin:
+The CLI loads the `.env` file automatically on startup. Edit the values in `.env`:
 
 ```bash
 GITHUB_USERS=octocat,torvalds
 DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/...
-GITHUB_TOKEN= # opsiyonel, rate limit için önerilir
+GITHUB_TOKEN= # optional, recommended for rate limits
 POLL_INTERVAL_SECONDS=300
 STATE_FILE=.github-stalker-state.json
 NOTIFY_ON_STARTUP=false
 ```
 
-Node.js `>=20.19.0` gerekir. Gerçek webhook URL'sini commit etmeyin. `.env` ve varsayılan state dosyası `.gitignore` içindedir.
+Node.js `>=20.19.0` is required. Do not commit your real webhook URL. The `.env` and the default state file are in `.gitignore`.
 
-## Çalıştırma
+## Running
 
-Tek seferlik smoke check:
+One-off smoke check:
 
 ```bash
 DRY_RUN=true GITHUB_USERS=octocat pnpm run once
 ```
 
-Gerçek webhook ile tek poll:
+Single poll with a real webhook:
 
 ```bash
 pnpm run once
 ```
 
-Sürekli servis:
+Continuous service:
 
 ```bash
 pnpm start
 ```
 
-`pnpm run once` ve `pnpm start` çalışmadan önce TypeScript build otomatik yapılır.
+The TypeScript build runs automatically before `pnpm run once` and `pnpm start`.
 
-JSON config ile çalıştırma:
+Running with a JSON config:
 
 ```bash
 pnpm start -- --config config.example.json
 ```
 
-Environment değişkenleri JSON config değerlerini override eder.
+Environment variables override JSON config values.
 
-## İlk çalıştırma davranışı
+## First-run behavior
 
-`NOTIFY_ON_STARTUP=false` varsayılandır. Bu modda ilk poll, GitHub'ın döndürdüğü mevcut aktiviteleri state'e yazar ama Discord'a göndermez; böylece eski aktiviteler spam olmaz. Sonraki poll'larda sadece yeni event ID'leri bildirilir.
+`NOTIFY_ON_STARTUP=false` is the default. In this mode the first poll writes the current activity returned by GitHub into the state but does not send it to Discord, so old activity does not spam. On subsequent polls only new event IDs are notified.
 
-`NOTIFY_ON_STARTUP=true` yaparsanız ilk poll'da GitHub public events API'nin o anda döndürdüğü desteklenen olaylar da Discord'a gönderilir.
+If you set `NOTIFY_ON_STARTUP=true`, the supported events that the GitHub public events API returns at that moment are also sent to Discord on the first poll.
 
-## Rate limit ve hata davranışı
+## Rate limit and error behavior
 
-- Sadece GitHub public events API okunur.
-- `GITHUB_TOKEN` opsiyoneldir ama rate limit'i artırmak için önerilir.
-- GitHub rate limit hatalarında reset zamanı loglanır; olaylar seen olarak işaretlenmez.
-- Discord `429` ve `5xx` cevaplarında retry yapılır.
-- `DRY_RUN=true` mevcut desteklenen event'ler için payload'ları yazdırır, `NOTIFY_ON_STARTUP=true` gibi davranır ve kalıcı state dosyasına event ID kaydetmez.
-- Webhook başarılı olmadan event ID state'e yazılmaz; böylece başarısız gönderimler sonraki poll'da tekrar denenir.
+- Only the GitHub public events API is read.
+- `GITHUB_TOKEN` is optional but recommended to raise the rate limit.
+- On GitHub rate limit errors the reset time is logged; events are not marked as seen.
+- Discord `429` and `5xx` responses are retried.
+- `DRY_RUN=true` prints the payloads for the currently supported events, behaves like `NOTIFY_ON_STARTUP=true`, and does not save event IDs to the persistent state file.
+- An event ID is not written to state until the webhook succeeds, so failed deliveries are retried on the next poll.
 
-## Doğrulama
+## Verification
 
 ```bash
 pnpm run typecheck
@@ -83,15 +83,15 @@ pnpm test
 pnpm run check
 ```
 
-Testler şunları kapsar:
+The tests cover:
 
-- GitHub event formatlama: push, repo creation, issue opened, PR opened
-- Discord webhook payload formatı ve mention kapatma
-- Discord 429 retry davranışı
-- Duplicate notification önleme ve restart-safe state persistence
-- İlk poll bootstrap davranışı
-- Config parsing ve GitHub rate limit hata yüzeyi
+- GitHub event formatting: push, repo creation, issue opened, PR opened
+- Discord webhook payload format and mention suppression
+- Discord 429 retry behavior
+- Duplicate notification prevention and restart-safe state persistence
+- First-poll bootstrap behavior
+- Config parsing and the GitHub rate limit error surface
 
-## Sınırlamalar
+## Limitations
 
-GitHub public events API yalnızca public aktiviteleri ve son aktivitelerin sınırlı bir penceresini döndürür. Çok aktif kullanıcılar için `POLL_INTERVAL_SECONDS` değerini düşürün ve `MAX_EVENTS_PER_USER` değerini 100'e yaklaştırın.
+The GitHub public events API only returns public activity and a limited window of recent activity. For very active users, lower `POLL_INTERVAL_SECONDS` and raise `MAX_EVENTS_PER_USER` closer to 100.
