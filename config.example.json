@@ -1,0 +1,9 @@
+{
+  "githubUsers": ["octocat", "torvalds"],
+  "discordWebhookUrl": "https://discord.com/api/webhooks/0000000000000000000/example-token",
+  "pollIntervalSeconds": 300,
+  "stateFile": ".github-stalker-state.json",
+  "maxEventsPerUser": 50,
+  "notifyOnStartup": false,
+  "dryRun": false
+}

@@ -1,0 +1,29 @@
+{
+  "name": "stalk-github-users",
+  "version": "0.1.0",
+  "description": "Track public GitHub activity for configured users and send detailed Discord webhook notifications.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "github-user-stalker": "dist/src/cli.js"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.json",
+    "typecheck": "tsgo -p tsconfig.json --noEmit",
+    "lint": "oxlint .",
+    "test": "pnpm run build && node --test dist/tests/*.test.js",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run test",
+    "prestart": "pnpm run build",
+    "start": "node dist/src/cli.js",
+    "preonce": "pnpm run build",
+    "once": "node dist/src/cli.js --once"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.2",
+    "@typescript/native-preview": "7.0.0-dev.20260606.1",
+    "oxlint": "^1.68.0"
+  }
+}
