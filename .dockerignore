@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+.github-stalker-state.json
+*.tmp
+*.lock
+.DS_Store
+Dockerfile
+.dockerignore
+docker-compose.yml
+README.md

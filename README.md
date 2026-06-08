@@ -59,6 +59,42 @@ pnpm start -- --config config.example.json
 
 Environment variables override JSON config values.
 
+## Docker deployment
+
+The repo ships a multi-stage `Dockerfile` and a `docker-compose.yml`. The build
+stage compiles the TypeScript with `tsgo`; the runtime stage ships only the
+compiled `dist/src` plus `package.json` (the project has no runtime npm
+dependencies). State is persisted to `/data` inside the container.
+
+Configure first, then run the long-running poller:
+
+```bash
+cp .env.example .env   # fill in GITHUB_USERS and DISCORD_WEBHOOK_URL
+docker compose up -d --build
+docker compose logs -f
+```
+
+Compose mounts the named `stalker-state` volume at `/data` and forces
+`STATE_FILE=/data/state.json`, so seen-event IDs survive restarts and image
+rebuilds. `SIGTERM` (via `docker stop`) is forwarded by `tini`, so the poller
+shuts down cleanly between cycles.
+
+Build and run without compose:
+
+```bash
+docker build -t stalk-github-users .
+docker run -d --name stalk-github-users --restart unless-stopped \
+  --env-file .env -e STATE_FILE=/data/state.json \
+  -v stalker-state:/data stalk-github-users
+```
+
+A single poll (cron-style) instead of the long-running service:
+
+```bash
+docker run --rm --env-file .env -e STATE_FILE=/data/state.json \
+  -v stalker-state:/data stalk-github-users node dist/src/cli.js --once
+```
+
 ## First-run behavior
 
 `NOTIFY_ON_STARTUP=false` is the default. In this mode the first poll writes the current activity returned by GitHub into the state but does not send it to Discord, so old activity does not spam. On subsequent polls only new event IDs are notified.
